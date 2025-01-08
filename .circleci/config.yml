@@ -4,46 +4,46 @@
 
 version: 2.1
 
-Jobs:
+jobs:
   build:
     docker:
-      -image: circleci/node: 20
+      - image: circleci/node: 20
     steps:
-      -checkout
-      -run:
+      - checkout
+      - run:
         name: install dependencies
         command: npm ci
-      -run:
+      - run:
         name: run tests
         command: npm test
-      -run: 
+      - run: 
         name: build production
         command: npm run build
-      -persist-to-workspace:
+      - persist-to-workspace:
         root:
         paths:
           -build
-      -s3-push:
-        docker:
-          -image: circleci/node:20
+  - s3-push:
+      docker:
+        - image: circleci/node:20
       steps:
-        -attach_workspace:
-          at:
-        -run:
-          name: install aws cli
-          command: |
-            sudo apt.get update &&\
-            sudo apt.get install-y awscli
-        -run:
-          name:
-          command: |
-            aws s3 sync build s3://circle-ci-radical/rahul-circleci/
-    workflows:
-      build and push s3:
-        jobs:
-          -build: 
-          -s3-push
-           requires: 
-             -build
-           context: rahul-circlecd1
+        - attach_workspace:
+            at:
+        - run:
+            name: install aws cli
+            command: |
+              sudo apt.get update &&\
+              sudo apt.get install-y awscli
+       - run:
+           name:
+           command: |
+             aws s3 sync build s3://circle-ci-radical/rahul-circleci/
+workflows:
+  build and push s3:
+    jobs:
+      - build: 
+      - s3-push
+          requires: 
+             - build
+          context: rahul-circlecd1
            
