@@ -57,7 +57,7 @@ workflows:
           requires:
             - build
           context: 
-            orgs- rahul-circlecd1
+            rahul-circlecd1
 
           # filters:
           #   branches:
