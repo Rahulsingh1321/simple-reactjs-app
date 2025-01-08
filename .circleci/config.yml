@@ -5,45 +5,60 @@
 version: 2.1
 
 jobs:
+  # 1) Build and Test job
   build:
     docker:
       - image: circleci/node:14
     steps:
       - checkout
+
       - run:
-        name: install dependencies
-        command: npm ci
-      #- run:
-       # name: run tests
-        #command: npm test
-      - run: 
-        name: build production
-        command: npm run build
+          name: Install dependencies
+          command: npm ci
+
+      # - run:
+      #     name: Run tests
+      #     command: npm test
+
+      - run:
+          name: Build production
+          command: npm run build
+
+      # Persist the 'build' directory to be used in the next job
       - persist_to_workspace:
-        root:
-        paths:
-          -build
-  - s3-push:
-      docker:
-        - image: circleci/node:20
-      steps:
-        - attach_workspace:
-            at:
-        - run:
-            name: install aws cli
-            command: |
-              sudo apt.get update &&\
-              sudo apt.get install-y awscli
-       - run:
-           name:
-           command: |
-             aws s3 sync build s3://circle-ci-radical/rahul-circleci/
+          root: .
+          paths:
+            - build
+
+  # 2) S3 Push job
+  s3_push:
+    docker:
+      - image: cimg/python:3.8.16
+    steps:
+      # Attach the workspace that was persisted in the build job
+      - attach_workspace:
+          at: .
+      - checkout
+      - run:
+          name: Install AWS CLI
+          command: pip install awscli
+
+      # Sync the 'build' folder to S3
+      - run:
+          name: Sync to S3
+          command: |
+            aws s3 sync build //:js-aarti
+
 workflows:
-  build and push s3:
+  build_and_deploy:
     jobs:
-      - build: 
-      - s3-push
-          requires: 
-             - build
-          context: rahul-circlecd1
-           
+      - build
+      - s3_push:
+          requires:
+            - build
+          context: 
+            orgs-context
+
+          # filters:
+          #   branches:
+          #     only: mai
