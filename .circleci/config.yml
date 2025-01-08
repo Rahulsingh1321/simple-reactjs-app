@@ -47,7 +47,7 @@ jobs:
       - run:
           name: Sync to S3
           command: |
-            aws s3 sync build s3://circle-ci-radical
+            aws s3 sync build s3://circle-ci-radical/rahul-circlecd/
 
 workflows:
   build_and_deploy:
