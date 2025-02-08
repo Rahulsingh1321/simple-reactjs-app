@@ -1,64 +1,71 @@
-# This config was automatically generated from your source code
-# Stacks detected: deps:node:.
-
-
+---
 version: 2.1
-
 jobs:
-  # 1) Build and Test job
   build:
     docker:
       - image: circleci/node:14
     steps:
       - checkout
-
       - run:
-          name: Install dependencies
+          name: install dependencies
           command: npm i
-
-      # - run:
-      #     name: Run tests
-      #     command: npm test
-
+     # - run:
+      #    name: Run Test
+       #   command: npm test
       - run:
-          name: Build production
+          name: Build Production
           command: npm run build
-
-      # Persist the 'build' directory to be used in the next job
+      - run:
+          name: Create a ZIP file
+          command: zip -r build.zip build appspec.yaml scripts
       - persist_to_workspace:
           root: .
           paths:
-            - build
-
-  # 2) S3 Push job
-  s3_push:
+            - build.zip
+  s3-push:
     docker:
       - image: cimg/python:3.8.16
     steps:
-      # Attach the workspace that was persisted in the build job
       - checkout
       - attach_workspace:
           at: .
       - run:
           name: Install AWS CLI
-          command: pip install awscli
-
-      # Sync the 'build' folder to S3
+          command: pip install  awscli
       - run:
-          name: Sync to S3
+          name: null
           command: |
-            aws s3 sync build s3://rahul-js
-
+            aws s3 sync build.zip s3://rahul-js/build-$CIRCLE_SHA1/build.zip
+  deploy-aws:
+    docker:
+      - image: cimg/python:3.8.16
+    steps:
+      - checkout
+      - run:
+          name: Install AWSCLI
+          command: pip install awscli
+      - run:
+          name: Trigger Codedeploy app 
+          command: |
+            aws deploy create-deployment \
+              --application-name rahul-aws-codedeployer \
+              --deployment-group-name rahul-codedeploy-aws \
+              --s3-location bucket=rahul-js,key=build-$CIRCLE_SHA1/build.zip,bundleType=zip \
+              --description "CircleCI Deployment for $CIRCLE_SHA1
+          
 workflows:
-  build_and_deploy:
+  buildandpushs3:
     jobs:
       - build
-      - s3_push:
+      - s3-push:
           requires:
             - build
-          context: 
-            rahul-circlecd1
-
-          # filters:
-          #   branches:
-          #     only: mai
+          context: AWS-CIRCLECI
+      - require-approval:
+          type: approval
+          requires:
+            - s3-push
+      - deploy-aws:
+          requires:
+            - require-approval
+          context: AWS-CIRCLECI
